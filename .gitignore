@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.log
+*.tmp
+*.DS_Store
+
+# Virtual environment
+venv/
+.env/
+
+# PyInstaller / packaging
+dist/
+build/
+*.spec
+
+# VS Code
+.vscode/
+
+# macOS system files
+.DS_Store
+
+# Jupyter notebook checkpoints (if used later)
+.ipynb_checkpoints/
+
+# OBS/QuickTime recordings (if you save them in project folder)
+*.mp4
+*.mov
+*.avi
+yes
