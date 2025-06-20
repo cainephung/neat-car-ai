@@ -2,10 +2,12 @@ import pygame
 import neat
 import os
 from car import Car
+from track import WALLS
 
 # Pygame setup
 WIDTH, HEIGHT = 800, 600
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
+CLOCK = pygame.time.Clock()
 pygame.display.set_caption("NEAT Car AI")
 
 FPS = 60
@@ -14,8 +16,16 @@ BG_COLOR = (30, 30, 30)
 
 def draw_window(cars):
     WIN.fill(BG_COLOR)
+
+    # Draw track
+    for x1, y1, x2, y2 in WALLS:
+        pygame.draw.line(WIN, (255, 255, 255), (x1, y1), (x2, y2), 2)
+
+    # Draw cars
     for car in cars:
-        car.draw(WIN)
+        if car.alive:
+            car.draw(WIN)
+
     pygame.display.update()
 
 def eval_genomes(genomes, config):
@@ -23,33 +33,58 @@ def eval_genomes(genomes, config):
     nets = []
     ge = []
 
-    for genome_id, genome in genomes:
+    start_x, start_y = 300, 550
+    offset_step = 10  # Spread cars out in grid to avoid overlapping
+
+    start_x, start_y = 300, 550
+    offset_step = 50  
+
+    for idx, (genome_id, genome) in enumerate(genomes):
         genome.fitness = 0
         net = neat.nn.FeedForwardNetwork.create(genome, config)
-        car = Car(400, 500)
+
+        offset_x = (idx % 5) * offset_step
+        offset_y = (idx // 5) * offset_step
+        car = Car(start_x + offset_x, start_y - offset_y)
+
         cars.append(car)
         nets.append(net)
         ge.append(genome)
 
-    run = True
-    clock = pygame.time.Clock()
 
-    while run and len(cars) > 0:
-        clock.tick(FPS)
+    run_time = 0
+    max_time = 2000
+
+    while run_time < max_time and any(car.alive for car in cars):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                quit()
-
-        for i, car in enumerate(cars):
-            # Basic sensor inputs (placeholder values for now)
-            inputs = car.get_inputs()
-            output = nets[i].activate(inputs)
-
-            car.update(output)
-            ge[i].fitness += car.get_fitness_delta()
+                return
 
         draw_window(cars)
+
+        for i, car in enumerate(cars):
+            if not car.alive:
+                continue
+
+            inputs = car.get_inputs()
+            output = nets[i].activate(inputs)
+            car.update(output)
+
+        # Car-to-car collision
+        for i, car1 in enumerate(cars):
+            if not car1.alive:
+                continue
+            for j, car2 in enumerate(cars):
+                if i != j and car2.alive and car1.collides_with(car2):
+                    car1.alive = False
+                    car2.alive = False
+
+        for i, car in enumerate(cars):
+            ge[i].fitness = car.get_fitness_delta()
+
+        CLOCK.tick(FPS)
+        run_time += 1
 
 def run(config_path):
     config = neat.config.Config(
